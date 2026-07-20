@@ -21,7 +21,7 @@ type Transaction = {
   amount: number;
   method: string;
   date: string;
-  status: "Berhasil";
+  status: "Menunggu" | "Berhasil" | "Gagal";
 };
 
 const INITIAL_PROGRAMS: Program[] = [
@@ -89,6 +89,9 @@ export default function Home() {
   const [anonymous, setAnonymous] = useState(false);
   const [payment, setPayment] = useState<Transaction | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+  const [transactionFilter, setTransactionFilter] = useState<"Semua" | Transaction["status"]>("Semua");
+  const [toast, setToast] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -96,8 +99,17 @@ export default function Home() {
     try {
       const savedPrograms = localStorage.getItem("amalhub-programs");
       const savedTransactions = localStorage.getItem("amalhub-transactions");
-      if (savedPrograms) setPrograms(JSON.parse(savedPrograms));
-      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+      if (savedPrograms) {
+        const parsedPrograms = JSON.parse(savedPrograms);
+        if (Array.isArray(parsedPrograms)) setPrograms(parsedPrograms);
+      }
+      if (savedTransactions) {
+        const parsedTransactions = JSON.parse(savedTransactions);
+        if (Array.isArray(parsedTransactions)) setTransactions(parsedTransactions);
+      }
+    } catch {
+      localStorage.removeItem("amalhub-programs");
+      localStorage.removeItem("amalhub-transactions");
     } finally {
       setHydrated(true);
     }
@@ -109,11 +121,41 @@ export default function Home() {
     localStorage.setItem("amalhub-transactions", JSON.stringify(transactions));
   }, [programs, transactions, hydrated]);
 
+  useEffect(() => {
+    if (!donationProgram && !showAdd) return;
+    const closeModal = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDonationProgram(null);
+        setShowAdd(false);
+      }
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeModal);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", closeModal);
+    };
+  }, [donationProgram, showAdd]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const stats = useMemo(() => ({
     total: programs.reduce((sum, item) => sum + item.collected, 0),
     donors: programs.reduce((sum, item) => sum + item.donors, 0),
     active: programs.length,
   }), [programs]);
+
+  const pendingTotal = useMemo(() => transactions
+    .filter((item) => item.status === "Menunggu")
+    .reduce((sum, item) => sum + item.amount, 0), [transactions]);
+
+  const filteredTransactions = useMemo(() => transactionFilter === "Semua"
+    ? transactions
+    : transactions.filter((item) => item.status === transactionFilter), [transactionFilter, transactions]);
 
   const goTo = (next: "home" | "admin") => {
     setView(next);
@@ -139,13 +181,29 @@ export default function Home() {
       amount,
       method,
       date: "Baru saja",
-      status: "Berhasil",
+      status: "Menunggu",
     };
     setTransactions((items) => [tx, ...items]);
-    setPrograms((items) => items.map((item) => item.id === donationProgram.id
-      ? { ...item, collected: item.collected + amount, donors: item.donors + 1 }
-      : item));
     setPayment(tx);
+  };
+
+  const updateTransactionStatus = (id: string, status: Transaction["status"]) => {
+    const target = transactions.find((item) => item.id === id);
+    if (!target || target.status === status) return;
+
+    if (status === "Berhasil" && target.status !== "Berhasil") {
+      setPrograms((items) => items.map((item) => item.id === target.programId
+        ? { ...item, collected: item.collected + target.amount, donors: item.donors + 1 }
+        : item));
+    }
+    if (target.status === "Berhasil" && status !== "Berhasil") {
+      setPrograms((items) => items.map((item) => item.id === target.programId
+        ? { ...item, collected: Math.max(0, item.collected - target.amount), donors: Math.max(0, item.donors - 1) }
+        : item));
+    }
+    setTransactions((items) => items.map((item) => item.id === id ? { ...item, status } : item));
+    setPayment((item) => item?.id === id ? { ...item, status } : item);
+    setToast(status === "Berhasil" ? "Pembayaran berhasil dikonfirmasi." : "Transaksi ditandai gagal.");
   };
 
   const addProgram = (event: FormEvent<HTMLFormElement>) => {
@@ -154,24 +212,54 @@ export default function Home() {
     const target = Number(form.get("target"));
     if (!target) return;
     const tones = ["mint", "sun", "sky", "rose"];
-    setPrograms((items) => [...items, {
-      id: Date.now(),
-      title: String(form.get("title")),
-      category: String(form.get("category")),
-      description: String(form.get("description")),
-      target,
-      collected: 0,
-      donors: 0,
-      icon: "✦",
-      tone: tones[items.length % tones.length],
-    }]);
+    setPrograms((items) => editingProgram
+      ? items.map((item) => item.id === editingProgram.id ? {
+        ...item,
+        title: String(form.get("title")),
+        category: String(form.get("category")),
+        description: String(form.get("description")),
+        target,
+      } : item)
+      : [...items, {
+        id: Date.now(),
+        title: String(form.get("title")),
+        category: String(form.get("category")),
+        description: String(form.get("description")),
+        target,
+        collected: 0,
+        donors: 0,
+        icon: "✦",
+        tone: tones[items.length % tones.length],
+      }]);
     setShowAdd(false);
+    setEditingProgram(null);
+    setToast(editingProgram ? "Perubahan program tersimpan." : "Program baru berhasil ditambahkan.");
+  };
+
+  const openProgramForm = (program?: Program) => {
+    setEditingProgram(program || null);
+    setShowAdd(true);
   };
 
   const removeProgram = (id: number) => {
     if (window.confirm("Hapus program ini? Data transaksi tetap tersimpan.")) {
       setPrograms((items) => items.filter((item) => item.id !== id));
+      setToast("Program berhasil dihapus.");
     }
+  };
+
+  const exportTransactions = () => {
+    const rows = [
+      ["ID", "Donatur", "Program", "Nominal", "Metode", "Waktu", "Status"],
+      ...filteredTransactions.map((item) => [item.id, item.name, currentProgramName(item.programId), String(item.amount), item.method, item.date, item.status]),
+    ];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    link.download = "laporan-transaksi-amalhub.csv";
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setToast("Laporan transaksi berhasil diunduh.");
   };
 
   const currentProgramName = (id: number) => programs.find((item) => item.id === id)?.title || "Program dihapus";
@@ -270,17 +358,18 @@ export default function Home() {
         <section className="dashboard">
           <div className="dashboard-top">
             <div><span className="section-kicker">Dashboard Admin</span><h1>Selamat datang kembali.</h1><p>Pantau kebaikan yang terus bertumbuh hari ini.</p></div>
-            <button className="primary" onClick={() => setShowAdd(true)}>＋ Tambah Program</button>
+            <button className="primary" onClick={() => openProgramForm()}>＋ Tambah Program</button>
           </div>
           <div className="stats-grid">
-            <article><span className="stat-icon green">↗</span><small>Total dana terkumpul</small><strong>{money(stats.total)}</strong><em>↑ 12,4% bulan ini</em></article>
-            <article><span className="stat-icon yellow">♙</span><small>Total donatur</small><strong>{stats.donors.toLocaleString("id-ID")}</strong><em>↑ 84 donatur baru</em></article>
-            <article><span className="stat-icon blue">✦</span><small>Program aktif</small><strong>{stats.active}</strong><em>Semua berjalan baik</em></article>
+            <article><span className="stat-icon green">↗</span><small>Total dana terkumpul</small><strong>{money(stats.total)}</strong><em>Dana terverifikasi</em></article>
+            <article><span className="stat-icon yellow">♙</span><small>Total donatur</small><strong>{stats.donors.toLocaleString("id-ID")}</strong><em>Donatur berhasil</em></article>
+            <article><span className="stat-icon blue">✦</span><small>Program aktif</small><strong>{stats.active}</strong><em>Program berjalan</em></article>
+            <article><span className="stat-icon coral">◷</span><small>Menunggu verifikasi</small><strong>{compactMoney(pendingTotal)}</strong><em>{transactions.filter((item) => item.status === "Menunggu").length} transaksi</em></article>
           </div>
 
           <div className="admin-grid">
             <section className="admin-panel programs-panel">
-              <div className="panel-title"><div><h2>Program Donasi</h2><p>Kelola dan pantau progres program.</p></div><button onClick={() => setShowAdd(true)}>＋ Tambah</button></div>
+              <div className="panel-title"><div><h2>Program Donasi</h2><p>Kelola dan pantau progres program.</p></div><button onClick={() => openProgramForm()}>＋ Tambah</button></div>
               <div className="admin-program-list">
                 {programs.map((program) => {
                   const progress = Math.min(100, Math.round(program.collected / program.target * 100));
@@ -288,20 +377,24 @@ export default function Home() {
                     <div className={`program-thumb ${program.tone}`}>{program.icon}</div>
                     <div className="admin-program-info"><strong>{program.title}</strong><span>{program.category} · {program.donors} donatur</span><div className="progress"><span style={{ width: `${progress}%` }}></span></div><small>{compactMoney(program.collected)} dari {compactMoney(program.target)}</small></div>
                     <b>{progress}%</b>
-                    <button className="delete-button" onClick={() => removeProgram(program.id)} aria-label={`Hapus ${program.title}`}>×</button>
+                    <div className="program-actions"><button className="edit-button" onClick={() => openProgramForm(program)} aria-label={`Edit ${program.title}`}>✎</button><button className="delete-button" onClick={() => removeProgram(program.id)} aria-label={`Hapus ${program.title}`}>×</button></div>
                   </article>;
                 })}
               </div>
             </section>
 
             <section className="admin-panel transactions-panel">
-              <div className="panel-title"><div><h2>Transaksi Terbaru</h2><p>Donasi yang baru saja masuk.</p></div><span className="live"><i></i> Live</span></div>
+              <div className="panel-title"><div><h2>Transaksi Terbaru</h2><p>Pantau dan verifikasi donasi masuk.</p></div><button onClick={exportTransactions}>↓ Ekspor</button></div>
+              <div className="transaction-filters" aria-label="Filter transaksi">
+                {(["Semua", "Menunggu", "Berhasil", "Gagal"] as const).map((item) => <button key={item} className={transactionFilter === item ? "active" : ""} onClick={() => setTransactionFilter(item)}>{item}</button>)}
+              </div>
               <div className="transaction-list">
-                {transactions.slice(0, 6).map((tx) => <article key={tx.id}>
+                {filteredTransactions.slice(0, 8).map((tx) => <article key={tx.id}>
                   <div className="donor-initial">{tx.name.charAt(0)}</div>
                   <div><strong>{tx.name}</strong><span>{currentProgramName(tx.programId)}</span><small>{tx.date} · {tx.method}</small></div>
-                  <p><strong>+{money(tx.amount)}</strong><span>✓ Berhasil</span></p>
+                  <div className="transaction-result"><strong>+{money(tx.amount)}</strong><span className={`status ${tx.status.toLowerCase()}`}>{tx.status}</span>{tx.status === "Menunggu" && <div className="verify-actions"><button onClick={() => updateTransactionStatus(tx.id, "Berhasil")} aria-label="Verifikasi transaksi">✓</button><button onClick={() => updateTransactionStatus(tx.id, "Gagal")} aria-label="Tolak transaksi">×</button></div>}</div>
                 </article>)}
+                {filteredTransactions.length === 0 && <div className="empty-state"><span>◎</span><p>Belum ada transaksi dengan status ini.</p></div>}
               </div>
             </section>
           </div>
@@ -330,36 +423,38 @@ export default function Home() {
                 <button className="primary full" type="submit">Lanjutkan pembayaran <span>→</span></button>
               </form>
             </> : <div className="payment-success">
-              <div className="success-mark">✓</div>
-              <span className="section-kicker">Donasi tercatat</span>
-              <h2>Terima kasih,<br />Orang Baik!</h2>
-              <p>Selesaikan pembayaran sebesar <strong>{money(payment.amount)}</strong> melalui {payment.method}.</p>
+              <div className={payment.status === "Berhasil" ? "success-mark" : "pending-mark"}>{payment.status === "Berhasil" ? "✓" : "◷"}</div>
+              <span className="section-kicker">{payment.status === "Berhasil" ? "Pembayaran berhasil" : "Menunggu pembayaran"}</span>
+              <h2>{payment.status === "Berhasil" ? <>Terima kasih,<br />Orang Baik!</> : <>Satu langkah<br />lagi.</>}</h2>
+              <p>{payment.status === "Berhasil" ? <>Donasi sebesar <strong>{money(payment.amount)}</strong> telah tercatat dan masuk ke progres program.</> : <>Selesaikan pembayaran sebesar <strong>{money(payment.amount)}</strong> melalui {payment.method}.</>}</p>
               <div className="payment-instruction">
-                {payment.method === "QRIS" ? <div className="fake-qr">▦</div> : <div className="account-number">{payment.method === "Transfer Bank" ? "7130 8810 245" : "0812 3456 7890"}</div>}
-                <small>{payment.method === "QRIS" ? "Pindai kode melalui aplikasi pembayaran Anda" : "Salin nomor tujuan dan lakukan pembayaran"}</small>
+                {payment.status === "Berhasil" ? <div className="receipt-check">✓</div> : payment.method === "QRIS" ? <div className="fake-qr">▦</div> : <div className="account-number">{payment.method === "Transfer Bank" ? "7130 8810 245" : "0812 3456 7890"}</div>}
+                <small>{payment.status === "Berhasil" ? `Donasi untuk ${currentProgramName(payment.programId)}` : payment.method === "QRIS" ? "Pindai kode melalui aplikasi pembayaran Anda" : "Salin nomor tujuan dan lakukan pembayaran"}</small>
                 <span>ID Transaksi: {payment.id}</span>
               </div>
-              <button className="primary full" onClick={() => setDonationProgram(null)}>Selesai</button>
+              {payment.status === "Menunggu" ? <button className="primary full" onClick={() => updateTransactionStatus(payment.id, "Berhasil")}>Saya sudah bayar <span>→</span></button> : <button className="primary full" onClick={() => setDonationProgram(null)}>Selesai</button>}
+              {payment.status === "Menunggu" && <button className="later-button" onClick={() => setDonationProgram(null)}>Bayar nanti — instruksi tersimpan</button>}
             </div>}
           </section>
         </div>
       )}
 
       {showAdd && (
-        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setShowAdd(false)}>
+        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowAdd(false); setEditingProgram(null); } }}>
           <section className="modal compact" role="dialog" aria-modal="true" aria-label="Tambah program">
-            <button className="modal-close" onClick={() => setShowAdd(false)}>×</button>
-            <span className="section-kicker">Program Baru</span><h2>Mulai gerakan baik.</h2>
+            <button className="modal-close" onClick={() => { setShowAdd(false); setEditingProgram(null); }}>×</button>
+            <span className="section-kicker">{editingProgram ? "Edit Program" : "Program Baru"}</span><h2>{editingProgram ? "Perbarui program." : "Mulai gerakan baik."}</h2>
             <form onSubmit={addProgram}>
-              <label>Nama program</label><input className="field" name="title" placeholder="Contoh: Bantuan Banjir" required />
-              <label>Kategori</label><select className="field" name="category" defaultValue="Kemanusiaan"><option>Kemanusiaan</option><option>Pendidikan</option><option>Kesehatan</option><option>Lingkungan</option><option>Keagamaan</option></select>
-              <label>Deskripsi singkat</label><textarea className="field" name="description" placeholder="Jelaskan tujuan program..." required />
-              <label>Target dana</label><div className="amount-input"><span>Rp</span><input type="number" name="target" min="100000" placeholder="50000000" required /></div>
-              <button className="primary full" type="submit">Simpan program <span>→</span></button>
+              <label>Nama program</label><input className="field" name="title" defaultValue={editingProgram?.title || ""} placeholder="Contoh: Bantuan Banjir" required />
+              <label>Kategori</label><select className="field" name="category" defaultValue={editingProgram?.category || "Kemanusiaan"}><option>Kemanusiaan</option><option>Pendidikan</option><option>Kesehatan</option><option>Lingkungan</option><option>Keagamaan</option></select>
+              <label>Deskripsi singkat</label><textarea className="field" name="description" defaultValue={editingProgram?.description || ""} placeholder="Jelaskan tujuan program..." required />
+              <label>Target dana</label><div className="amount-input"><span>Rp</span><input type="number" name="target" defaultValue={editingProgram?.target || ""} min="100000" placeholder="50000000" required /></div>
+              <button className="primary full" type="submit">{editingProgram ? "Simpan perubahan" : "Simpan program"} <span>→</span></button>
             </form>
           </section>
         </div>
       )}
+      {toast && <div className="toast" role="status"><span>✓</span>{toast}</div>}
     </main>
   );
 }
