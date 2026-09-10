@@ -35,15 +35,17 @@ export async function ensureDatabase() {
   await binding.prepare("UPDATE transactions SET status='expired',updated_at=CURRENT_TIMESTAMP WHERE status='pending' AND expires_at IS NOT NULL AND expires_at < datetime('now')").run();
   const settings = await binding.prepare("SELECT COUNT(*) AS count FROM site_settings").first<{count:number}>();
   if (!settings?.count) await binding.batch([
-    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("organization_name", "Yayasan AmalHub Indonesia"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("organization_name", "Yayasan Pendidikan Nurul Iman Pesawaran"),
     binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("legal_number", "Lengkapi nomor legalitas"),
     binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("address", "Indonesia"),
-    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("email", "halo@amalhub.id"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("email", ""),
     binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("phone", "08xx-xxxx-xxxx"),
     binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("bank_name", "Bank Syariah Indonesia"),
     binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("bank_account", "Lengkapi rekening yayasan"),
-    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("instagram", "@amalhub"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("instagram", ""),
   ]);
+  await binding.prepare("UPDATE site_settings SET value='Yayasan Pendidikan Nurul Iman Pesawaran',updated_at=CURRENT_TIMESTAMP WHERE key='organization_name' AND value='Yayasan AmalHub Indonesia'").run();
+  await binding.prepare("UPDATE site_settings SET value='',updated_at=CURRENT_TIMESTAMP WHERE (key='email' AND value='halo@amalhub.id') OR (key='instagram' AND value='@amalhub')").run();
 }
 
 export function id(prefix: string) { return `${prefix}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`; }

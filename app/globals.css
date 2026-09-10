@@ -8,7 +8,7 @@ a { color:inherit; text-decoration:none; }
 button,input,select,textarea { font:inherit; }
 button { color:inherit; }
 .site-header { height:84px; display:flex; align-items:center; justify-content:space-between; padding:0 max(5vw,32px); position:relative; z-index:20; background:var(--paper); border-bottom:1px solid rgba(22,60,53,.08); }
-.brand { border:0; background:none; display:flex; align-items:center; gap:10px; cursor:pointer; font-size:24px; font-weight:800; letter-spacing:-1px; padding:0; }
+.brand { border:0; background:none; display:flex; align-items:center; gap:10px; cursor:pointer; font-size:20px; font-weight:800; letter-spacing:-.7px; padding:0; white-space:nowrap; }
 .brand > span:last-child > span { color:#5f9e77; }
 .brand-mark { width:35px; height:35px; border-radius:50% 50% 44% 56%; display:grid; place-items:center; color:white; background:var(--green); font-family:Georgia,serif; font-style:italic; transform:rotate(-7deg); }
 .nav-links { display:flex; align-items:center; gap:34px; }
@@ -91,6 +91,7 @@ footer{background:#0d302a;color:white;padding:45px max(6.5vw,38px);display:grid;
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 /* Dashboard responsif: seluruh alat selalu terlihat dan konten tidak bergeser keluar layar. */
+.admin-shell{grid-template-columns:255px 1fr}.admin-sidebar>.brand{font-size:14px;letter-spacing:-.25px}
 @media(max-width:1024px){
   .admin-shell{display:block;min-width:0}
   .admin-sidebar{position:sticky;top:0;z-index:60;width:100%;height:auto;min-height:0;padding:12px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(4,31,26,.16)}
@@ -109,6 +110,7 @@ footer{background:#0d302a;color:white;padding:45px max(6.5vw,38px);display:grid;
   .team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:620px){
+  .site-header>.brand{font-size:13px;letter-spacing:-.25px}.site-header>.brand .brand-mark{width:31px;height:31px}
   .admin-sidebar{grid-template-columns:auto minmax(0,1fr);padding:10px 12px;gap:9px}
   .admin-sidebar .brand-mark{width:32px;height:32px}
   .admin-account{display:none}

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     const transactionId = id("DN"), expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     let provider = "manual", providerId: string | null = null;
-    let paymentAction = JSON.stringify({ descriptor: method === "QRIS" ? "QR_STRING" : method === "Transfer Bank" ? "VIRTUAL_ACCOUNT_NUMBER" : "WEB_URL", value: method === "Transfer Bank" ? "71308810245" : method === "E-Wallet" ? "https://example.com/demo-wallet" : "AMALHUB-DEMO-QRIS" });
+    let paymentAction = JSON.stringify({ descriptor: method === "QRIS" ? "QR_STRING" : method === "Transfer Bank" ? "VIRTUAL_ACCOUNT_NUMBER" : "WEB_URL", value: method === "Transfer Bank" ? "71308810245" : method === "E-Wallet" ? "https://example.com/demo-wallet" : "GRIYA-JARIYAH-NURUL-IMAN-DEMO-QRIS" });
     const secret = appEnv().XENDIT_SECRET_KEY;
     if (secret) {
       const origin = new URL(request.url).origin;

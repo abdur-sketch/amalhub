@@ -1,4 +1,4 @@
-# AmalHub
+# Griya Jariyah Nurul Iman
 
 Platform donasi untuk donatur dan admin yayasan dengan database terpusat, dashboard berbasis peran, pelacakan transaksi, laporan penyaluran, kuitansi, dan integrasi Xendit yang dapat diaktifkan melalui variabel lingkungan.
 
