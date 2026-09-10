@@ -14,15 +14,21 @@ test("public donation flow is connected to durable APIs", async () => {
 });
 
 test("admin surface is protected and supports operations", async () => {
-  const [page, dashboard, api] = await Promise.all([
+  const [page, dashboard, api, layout, css] = await Promise.all([
     readFile(new URL("app/admin/page.tsx", root), "utf8"),
     readFile(new URL("app/admin/AdminDashboard.tsx", root), "utf8"),
     readFile(new URL("app/api/admin/route.ts", root), "utf8"),
+    readFile(new URL("app/layout.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
   ]);
   assert.match(page, /requireChatGPTUser\("\/admin"\)/);
   for (const feature of ["Program", "Transaksi", "Penyaluran", "Tim & Peran", "Audit", "Ekspor CSV"]) assert.match(dashboard, new RegExp(feature));
   assert.match(api, /requireAdmin/);
   assert.match(api, /audit\(/);
+  assert.match(layout, /width: "device-width"/);
+  assert.match(dashboard, /aria-pressed=\{tab===id\}/);
+  assert.match(css, /Dashboard responsif/);
+  assert.match(css, /overflow-x:auto/);
 });
 
 test("database and payment webhook are configured", async () => {

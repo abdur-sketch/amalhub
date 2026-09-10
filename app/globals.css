@@ -87,3 +87,40 @@ footer{background:#0d302a;color:white;padding:45px max(6.5vw,38px);display:grid;
 @media(max-width:720px){.report-section{padding:70px 22px}.update-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.detail-stats{grid-template-columns:1fr}.admin-shell{display:block}.admin-sidebar{position:sticky;height:auto;z-index:40;padding:13px 16px;flex-direction:row;align-items:center}.admin-sidebar .brand>span:last-child{display:none}.admin-sidebar nav{margin:0 0 0 auto;display:flex}.admin-sidebar nav button{display:none}.admin-sidebar nav button.active{display:block;font-size:10px}.admin-sidebar nav button.active span{font-size:12px;margin-right:5px}.admin-account{display:none}.admin-main{padding:28px 16px 70px}.admin-main>header h1{font-size:30px}.admin-main>header>a{display:none}.admin-stats{grid-template-columns:1fr}.team-grid{grid-template-columns:1fr}.table-tools{grid-template-columns:1fr}.admin-card{padding:17px}}
 @media(max-width:390px){.hero h1{font-size:46px}.hero-actions{align-items:flex-start;flex-direction:column;gap:10px}.payment-methods{grid-template-columns:1fr}.payment-methods button span{display:inline;margin-right:8px}.impact-strip strong{font-size:17px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* Dashboard responsif: seluruh alat selalu terlihat dan konten tidak bergeser keluar layar. */
+@media(max-width:1024px){
+  .admin-shell{display:block;min-width:0}
+  .admin-sidebar{position:sticky;top:0;z-index:60;width:100%;height:auto;min-height:0;padding:12px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(4,31,26,.16)}
+  .admin-sidebar .brand>span:last-child{display:none}
+  .admin-sidebar nav{margin:0;display:flex;gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none;padding:2px}
+  .admin-sidebar nav::-webkit-scrollbar{display:none}
+  .admin-sidebar nav button,.admin-sidebar nav button:not(.active),.admin-sidebar nav button.active{display:flex;align-items:center;gap:7px;flex:0 0 auto;width:auto;padding:10px 13px;font-size:10px;text-align:center;white-space:nowrap}
+  .admin-sidebar nav button span,.admin-sidebar nav button.active span{width:auto;font-size:13px;margin:0}
+  .admin-account{margin:0;padding:0;border:0;display:flex;align-items:center;gap:8px}
+  .admin-account>div{width:32px;height:32px}
+  .admin-account p{display:none}
+  .admin-account>a{display:block}
+  .admin-main{width:100%;min-width:0;padding:30px 22px 72px}
+  .admin-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-overview{grid-template-columns:1fr}
+  .team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .admin-sidebar{grid-template-columns:auto minmax(0,1fr);padding:10px 12px;gap:9px}
+  .admin-sidebar .brand-mark{width:32px;height:32px}
+  .admin-account{display:none}
+  .admin-sidebar nav button,.admin-sidebar nav button:not(.active),.admin-sidebar nav button.active{padding:9px 11px;font-size:9px}
+  .admin-main{padding:24px 14px 65px}
+  .admin-main>header{margin-bottom:20px}
+  .admin-main>header h1{font-size:29px}
+  .admin-main>header>a{display:none}
+  .admin-stats{grid-template-columns:1fr}
+  .admin-card{padding:15px}
+  .admin-card-title{align-items:flex-start;gap:12px}
+  .admin-card-title button{flex:0 0 auto}
+  .team-grid{grid-template-columns:1fr}
+  .table-tools{grid-template-columns:1fr}
+  .distribution-list article{grid-template-columns:32px 1fr}
+  .distribution-list article>b{grid-column:2}
+}
