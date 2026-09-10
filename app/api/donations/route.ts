@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     }
     await db().prepare("INSERT INTO transactions (id,program_id,donor_name,email,phone,message,anonymous,amount,method,status,provider,provider_id,payment_action,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
       .bind(transactionId, programId, donorName, email, phone, message, anonymous ? 1 : 0, amount, method, "pending", provider, providerId, paymentAction, expiresAt).run();
+    await db().prepare("INSERT INTO notifications (id,type,title,message,entity_type,entity_id) VALUES (?,?,?,?,?,?)").bind(id("NTF"), "transaction", "Donasi baru menunggu pembayaran", `${donorName} membuat donasi Rp${amount.toLocaleString("id-ID")} untuk ${program.title}.`, "transaction", transactionId).run();
     return Response.json({ transaction: { id: transactionId, programId, programTitle: program.title, donorName, email, phone, message, anonymous, amount, method, status: "pending", provider, paymentAction: JSON.parse(paymentAction), expiresAt, createdAt: new Date().toISOString() } }, { status: 201 });
   } catch (error) { return errorResponse(error); }
 }

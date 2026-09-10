@@ -22,7 +22,7 @@ test("admin surface is protected and supports operations", async () => {
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
   assert.match(page, /requireChatGPTUser\("\/admin"\)/);
-  for (const feature of ["Program", "Transaksi", "Penyaluran", "Tim & Peran", "Audit", "Ekspor CSV"]) assert.match(dashboard, new RegExp(feature));
+  for (const feature of ["Program", "Transaksi", "Penyaluran", "Media", "Tim & Peran", "Laporan", "Pengaturan", "Audit", "Ekspor CSV", "Backup JSON", "Catatan internal"]) assert.match(dashboard, new RegExp(feature));
   assert.match(api, /requireAdmin/);
   assert.match(api, /audit\(/);
   assert.match(layout, /width: "device-width"/);
@@ -38,6 +38,7 @@ test("database and payment webhook are configured", async () => {
     readFile(new URL("app/api/webhooks/xendit/route.ts", root), "utf8"),
   ]);
   assert.match(hosting, /"d1": "DB"/);
-  for (const table of ["programs", "transactions", "disbursements", "adminUsers", "auditLogs"]) assert.match(schema, new RegExp(`export const ${table}`));
+  assert.match(hosting, /"r2": "MEDIA"/);
+  for (const table of ["programs", "transactions", "disbursements", "adminUsers", "auditLogs", "siteSettings", "mediaAssets", "transactionNotes", "notifications"]) assert.match(schema, new RegExp(`export const ${table}`));
   assert.match(webhook, /XENDIT_WEBHOOK_TOKEN/);
 });

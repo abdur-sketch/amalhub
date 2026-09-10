@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
-type AppEnv = { DB?: D1Database; XENDIT_SECRET_KEY?: string; XENDIT_WEBHOOK_TOKEN?: string; ADMIN_EMAILS?: string };
+type AppEnv = { DB?: D1Database; MEDIA?: R2Bucket; XENDIT_SECRET_KEY?: string; XENDIT_WEBHOOK_TOKEN?: string; ADMIN_EMAILS?: string };
 export type AdminRole = "super_admin" | "program_admin" | "finance_admin" | "auditor";
 export function appEnv() { return env as unknown as AppEnv; }
 export function db() { const binding = appEnv().DB; if (!binding) throw new Error("Database belum tersedia."); return binding; }
@@ -14,9 +14,15 @@ export async function ensureDatabase() {
     binding.prepare("CREATE TABLE IF NOT EXISTS disbursements (id TEXT PRIMARY KEY, program_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, amount INTEGER NOT NULL, disbursed_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     binding.prepare("CREATE TABLE IF NOT EXISTS admin_users (email TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'auditor', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     binding.prepare("CREATE TABLE IF NOT EXISTS audit_logs (id TEXT PRIMARY KEY, admin_email TEXT NOT NULL, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, details TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    binding.prepare("CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    binding.prepare("CREATE TABLE IF NOT EXISTS media_assets (id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, object_key TEXT NOT NULL, file_name TEXT NOT NULL, content_type TEXT NOT NULL, size INTEGER NOT NULL, caption TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    binding.prepare("CREATE TABLE IF NOT EXISTS transaction_notes (id TEXT PRIMARY KEY, transaction_id TEXT NOT NULL, note TEXT NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    binding.prepare("CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, type TEXT NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'unread', entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     binding.prepare("CREATE INDEX IF NOT EXISTS transactions_program_idx ON transactions(program_id)"),
     binding.prepare("CREATE INDEX IF NOT EXISTS transactions_status_idx ON transactions(status)"),
     binding.prepare("CREATE INDEX IF NOT EXISTS disbursements_program_idx ON disbursements(program_id)"),
+    binding.prepare("CREATE INDEX IF NOT EXISTS media_entity_idx ON media_assets(entity_type,entity_id)"),
+    binding.prepare("CREATE INDEX IF NOT EXISTS notes_transaction_idx ON transaction_notes(transaction_id)"),
   ]);
   const count = await binding.prepare("SELECT COUNT(*) AS count FROM programs").first<{ count: number }>();
   if (!count?.count) await binding.batch([
@@ -27,6 +33,17 @@ export async function ensureDatabase() {
     binding.prepare("INSERT INTO disbursements (id,program_id,title,description,amount,disbursed_at) VALUES (?,?,?,?,?,?)").bind("dist-002", "program-air", "Pengeboran sumur dimulai", "Pembelian material dan biaya pengeboran sumur pertama.", 32000000, "2026-08-02"),
   ]);
   await binding.prepare("UPDATE transactions SET status='expired',updated_at=CURRENT_TIMESTAMP WHERE status='pending' AND expires_at IS NOT NULL AND expires_at < datetime('now')").run();
+  const settings = await binding.prepare("SELECT COUNT(*) AS count FROM site_settings").first<{count:number}>();
+  if (!settings?.count) await binding.batch([
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("organization_name", "Yayasan AmalHub Indonesia"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("legal_number", "Lengkapi nomor legalitas"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("address", "Indonesia"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("email", "halo@amalhub.id"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("phone", "08xx-xxxx-xxxx"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("bank_name", "Bank Syariah Indonesia"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("bank_account", "Lengkapi rekening yayasan"),
+    binding.prepare("INSERT INTO site_settings (key,value) VALUES (?,?)").bind("instagram", "@amalhub"),
+  ]);
 }
 
 export function id(prefix: string) { return `${prefix}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`; }

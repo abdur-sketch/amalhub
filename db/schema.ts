@@ -46,3 +46,26 @@ export const auditLogs = sqliteTable("audit_logs", {
   entityType: text("entity_type").notNull(), entityId: text("entity_id").notNull(), details: text("details").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const siteSettings = sqliteTable("site_settings", {
+  key: text("key").primaryKey(), value: text("value").notNull().default(""),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const mediaAssets = sqliteTable("media_assets", {
+  id: text("id").primaryKey(), entityType: text("entity_type").notNull(), entityId: text("entity_id").notNull(),
+  objectKey: text("object_key").notNull(), fileName: text("file_name").notNull(), contentType: text("content_type").notNull(),
+  size: integer("size").notNull(), caption: text("caption").notNull().default(""), createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const transactionNotes = sqliteTable("transaction_notes", {
+  id: text("id").primaryKey(), transactionId: text("transaction_id").notNull(), note: text("note").notNull(),
+  createdBy: text("created_by").notNull(), createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const notifications = sqliteTable("notifications", {
+  id: text("id").primaryKey(), type: text("type").notNull(), title: text("title").notNull(), message: text("message").notNull(),
+  status: text("status").notNull().default("unread"), entityType: text("entity_type").notNull(), entityId: text("entity_id").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
